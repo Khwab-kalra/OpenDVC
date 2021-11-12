@@ -9,6 +9,16 @@ import MC_network
 import load
 import gc
 
+I_level, Height, Width, batch_size, Channel, \
+activation, GOP_size, GOP_num, \
+path, path_com, path_bin, path_lat = helper.configure(args)
+
+
+
+
+
+
+
 config = tf.ConfigProto(allow_soft_placement=True)
 sess = tf.Session(config=config)
 
@@ -40,6 +50,13 @@ Y0_com = tf.placeholder(tf.float32, [batch_size, Height, Width, Channel])
 Y1_raw = tf.placeholder(tf.float32, [batch_size, Height, Width, Channel])
 learning_rate = tf.placeholder(tf.float32, [])
 
+hidden_states = tf.placeholder(tf.float32, [8, batch_size, Height//4, Width//4, args.N]) # hidden states in RAE
+
+c_enc_mv, h_enc_mv, \
+c_dec_mv, h_dec_mv, \
+c_enc_res, h_enc_res, \
+c_dec_res, h_dec_res = tf.split(hidden_states, 8, axis=0)
+
 with tf.variable_scope("flow_motion"):
 
     flow_tensor, _, _, _, _, _ = motion.optical_flow(Y0_com, Y1_raw, batch_size, Height, Width)
@@ -58,14 +75,13 @@ flow_hat = CNN_img.MV_synthesis(flow_latent_hat, args.N)
 
 # Motion Compensation
 Y1_warp = tf.contrib.image.dense_image_warp(Y0_com, flow_hat)
-
 MC_input = tf.concat([flow_hat, Y0_com, Y1_warp], axis=-1)
 Y1_MC = MC_network.MC(MC_input)
 
 # Encode residual
 Res = Y1_raw - Y1_MC
 
-res_latent = CNN_img.Res_analysis(Res, num_filters=args.N, M=args.M, Height, Width)
+res_latent = CNN_img.Res_analysis(Res, num_filters=args.N, M=args.M, Height, Width, c_state=c_enc_res[0], h_state=h_enc_res[0], act=activation)
 
 entropy_bottleneck_res = tfc.EntropyBottleneck()
 string_res = entropy_bottleneck_res.compress(res_latent)
@@ -73,7 +89,7 @@ string_res = entropy_bottleneck_res.compress(res_latent)
 
 res_latent_hat, Res_likelihoods = entropy_bottleneck_res(res_latent, training=True)
 
-Res_hat = CNN_img.Res_synthesis(res_latent_hat, num_filters=args.N, Height, Width)
+Res_hat = CNN_img.Res_synthesis(res_latent_hat, num_filters=args.N, Height, Width, c_state=c_enc_res[0], h_state=h_enc_res[0], act=activation)
 
 # Reconstructed frame
 Y1_com = Res_hat + Y1_MC
