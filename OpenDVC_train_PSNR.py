@@ -65,7 +65,7 @@ Y1_MC = MC_network.MC(MC_input)
 # Encode residual
 Res = Y1_raw - Y1_MC
 
-res_latent = CNN_img.Res_analysis(Res, num_filters=args.N, M=args.M)
+res_latent = CNN_img.Res_analysis(Res, num_filters=args.N, M=args.M, Height, Width)
 
 entropy_bottleneck_res = tfc.EntropyBottleneck()
 string_res = entropy_bottleneck_res.compress(res_latent)
@@ -73,7 +73,7 @@ string_res = entropy_bottleneck_res.compress(res_latent)
 
 res_latent_hat, Res_likelihoods = entropy_bottleneck_res(res_latent, training=True)
 
-Res_hat = CNN_img.Res_synthesis(res_latent_hat, num_filters=args.N)
+Res_hat = CNN_img.Res_synthesis(res_latent_hat, num_filters=args.N, Height, Width)
 
 # Reconstructed frame
 Y1_com = Res_hat + Y1_MC
