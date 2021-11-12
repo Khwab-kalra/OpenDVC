@@ -13,12 +13,6 @@ I_level, Height, Width, batch_size, Channel, \
 activation, GOP_size, GOP_num, \
 path, path_com, path_bin, path_lat = helper.configure(args)
 
-
-
-
-
-
-
 config = tf.ConfigProto(allow_soft_placement=True)
 sess = tf.Session(config=config)
 
