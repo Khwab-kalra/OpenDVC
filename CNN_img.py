@@ -68,10 +68,10 @@ def MV_synthesis(tensor, num_filters):
     return tensor
 
 
-def Res_analysis(tensor, num_filters, M, reuse=False):
+def Res_analysis(tensor, num_filters, out_filters, Height, Width, c_state, h_state, act):
   """Builds the analysis transform."""
 
-  with tf.variable_scope("analysis", reuse=reuse):
+  with tf.variable_scope("analysis", reuse=tf.AUTO_REUSE):
     with tf.variable_scope("layer_0"):
       layer = tfc.SignalConv2D(
           num_filters, (5, 5), corr=True, strides_down=2, padding="same_zeros",
@@ -83,6 +83,11 @@ def Res_analysis(tensor, num_filters, M, reuse=False):
           num_filters, (5, 5), corr=True, strides_down=2, padding="same_zeros",
           use_bias=True, activation=tfc.GDN())
       tensor = layer(tensor)
+
+    with tf.variable_scope("recurrent"):
+      tensor, c_state_out, h_state_out = one_step_rnn(tensor, c_state, h_state,
+                                              Height, Width, num_filters,
+                                              scale=4, kernal=[5, 5], act=act)
 
     with tf.variable_scope("layer_2"):
       layer = tfc.SignalConv2D(
@@ -92,16 +97,15 @@ def Res_analysis(tensor, num_filters, M, reuse=False):
 
     with tf.variable_scope("layer_3"):
       layer = tfc.SignalConv2D(
-          M, (5, 5), corr=True, strides_down=2, padding="same_zeros",
-          use_bias=False, activation=None)
+          out_filters, (5, 5), corr=True, strides_down=2, padding="same_zeros",
+          use_bias=True, activation=None)
       tensor = layer(tensor)
 
-    return tensor
-
-def Res_synthesis(tensor, num_filters, reuse=False):
+    return tensor, c_state_out, h_state_out
+def Res_synthesis(tensor, num_filters, Height, Width, c_state, h_state, act):
   """Builds the synthesis transform."""
 
-  with tf.variable_scope("synthesis", reuse=reuse):
+  with tf.variable_scope("synthesis", reuse=tf.AUTO_REUSE):
     with tf.variable_scope("layer_0"):
       layer = tfc.SignalConv2D(
           num_filters, (5, 5), corr=False, strides_up=2, padding="same_zeros",
@@ -113,6 +117,11 @@ def Res_synthesis(tensor, num_filters, reuse=False):
           num_filters, (5, 5), corr=False, strides_up=2, padding="same_zeros",
           use_bias=True, activation=tfc.GDN(inverse=True))
       tensor = layer(tensor)
+
+    with tf.variable_scope("recurrent"):
+      tensor, c_state_out, h_state_out = one_step_rnn(tensor, c_state, h_state,
+                                              Height, Width, num_filters,
+                                              scale=4, kernal=[5, 5], act=act)
 
     with tf.variable_scope("layer_2"):
       layer = tfc.SignalConv2D(
@@ -126,4 +135,4 @@ def Res_synthesis(tensor, num_filters, reuse=False):
           use_bias=True, activation=None)
       tensor = layer(tensor)
 
-    return tensor
+    return tensor, c_state_out, h_state_out
