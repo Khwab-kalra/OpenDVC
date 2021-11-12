@@ -9,9 +9,7 @@ import MC_network
 import load
 import gc
 
-I_level, Height, Width, batch_size, Channel, \
-activation, GOP_size, GOP_num, \
-path, path_com, path_bin, path_lat = helper.configure(args)
+
 
 config = tf.ConfigProto(allow_soft_placement=True)
 sess = tf.Session(config=config)
@@ -23,6 +21,10 @@ parser.add_argument("--N", type=int, default=128, choices=[128])
 parser.add_argument("--M", type=int, default=128, choices=[128])
 args = parser.parse_args()
 
+I_level, Height, Width, batch_size, Channel, \
+activation, GOP_size, GOP_num, \
+path, path_com, path_bin, path_lat = helper.configure(args) 
+      
 if args.l == 256:
     I_QP = 37
 elif args.l == 512:
